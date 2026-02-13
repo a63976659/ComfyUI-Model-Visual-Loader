@@ -2,6 +2,7 @@
 
 import folder_paths
 import comfy.sd
+import torch
 
 class UNET加载器:
     @classmethod
@@ -17,9 +18,19 @@ class UNET加载器:
     RETURN_NAMES = ("模型",)
     FUNCTION = "load_unet"
     CATEGORY = "💝可视化加载器"
-    DESCRIPTION = "仅加载模型的 UNET 部分（扩散模型核心）。通常用于高级工作流，例如需要单独替换 UNET 或使用 GGUF/NF4 格式量化模型时使用。"
+    DESCRIPTION = "参考官方 UNETLoader 实现。支持可视化选择并正确配置权重精度。"
 
     def load_unet(self, UNET名称, 权重类型):
-        unet_path = folder_paths.get_full_path("diffusion_models", UNET名称)
-        model = comfy.sd.load_unet(unet_path)
+        model_options = {}
+        if 权重类型 == "fp8_e4m3fn":
+            model_options["dtype"] = torch.float8_e4m3fn
+        elif 权重类型 == "fp8_e4m3fn_fast":
+            model_options["dtype"] = torch.float8_e4m3fn
+            model_options["fp8_optimizations"] = True
+        elif 权重类型 == "fp8_e5m2":
+            model_options["dtype"] = torch.float8_e5m2
+
+        # 使用官方推荐的加载方式
+        unet_path = folder_paths.get_full_path_or_raise("diffusion_models", UNET名称)
+        model = comfy.sd.load_diffusion_model(unet_path, model_options=model_options)
         return (model,)
