@@ -1,22 +1,18 @@
 import { api } from "../../scripts/api.js";
 import { app } from "../../scripts/app.js";
 
-// 【修改】新增 savedContext 参数，用于接收保存的状态
 export function createVisualWidget(node, modelType, topPadding, savedContext) {
     const container = document.createElement("div");
     container.className = "visual-loader-container";
-
-    // 使用 JS 动态控制位置
     container.style.top = `${topPadding}px`;
     container.style.height = `calc(100% - ${topPadding + 10}px)`;
 
-    // Header
+    // --- Header ---
     const header = document.createElement("div");
     header.className = "vl-header";
 
     const categorySelect = document.createElement("select");
     categorySelect.className = "vl-select";
-    // 默认先加一个全部，后续会被 updateCategories 覆盖
     const optAll = document.createElement("option");
     optAll.value = "全部";
     optAll.text = "全部";
@@ -25,32 +21,60 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
     const searchInput = document.createElement("input");
     searchInput.className = "vl-search";
     searchInput.type = "text";
-    searchInput.placeholder = "搜索模型...";
+    searchInput.placeholder = "搜索...";
 
     header.appendChild(categorySelect);
     header.appendChild(searchInput);
 
+    // --- Info Bar ---
     const infoBar = document.createElement("div");
     infoBar.className = "vl-info-bar";
     infoBar.innerText = "未选择模型";
 
+    // --- Grid ---
     const grid = document.createElement("div");
     grid.className = "vl-grid";
 
+    // --- Footer (新增) ---
+    const footer = document.createElement("div");
+    footer.className = "vl-footer";
+
+    const btnView = document.createElement("button");
+    btnView.className = "vl-btn";
+    btnView.innerText = "查看注释";
+    btnView.disabled = true; // 默认禁用，选中模型后启用
+
+    const btnEdit = document.createElement("button");
+    btnEdit.className = "vl-btn primary";
+    btnEdit.innerText = "修改注释";
+    btnEdit.disabled = true;
+
+    footer.appendChild(btnView);
+    footer.appendChild(btnEdit);
+
+    // 组装 DOM
     container.appendChild(header);
     container.appendChild(infoBar);
     container.appendChild(grid);
+    container.appendChild(footer); // 将 footer 加入容器
 
-    // --- 逻辑部分 ---
+    // --- 状态逻辑 ---
     let allItems = [];
-    
-    // 【核心修改1：状态恢复】
-    // 如果有保存的状态，就用保存的，否则用默认值
     let currentCategory = savedContext?.category || "全部";
     let searchQuery = savedContext?.search || "";
+    let selectedModelName = node.widgets[0].value || "";
 
-    // 恢复搜索框的值
     searchInput.value = searchQuery;
+
+    // 更新按钮状态
+    function updateButtonState() {
+        const hasSelection = !!selectedModelName;
+        btnView.disabled = !hasSelection;
+        btnEdit.disabled = !hasSelection;
+    }
+
+    // 初始状态检查
+    updateButtonState();
 
     function renderGrid() {
         grid.innerHTML = ""; 
@@ -63,17 +87,25 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
         filtered.forEach(item => {
             const card = document.createElement("div");
             card.className = "vl-card";
-            if (node.widgets[0].value === item.name) {
+            // 匹配逻辑优化
+            if (selectedModelName === item.name) {
                 card.classList.add("selected");
             }
 
             card.onclick = () => {
+                selectedModelName = item.name;
                 node.widgets[0].value = item.name;
                 node.widgets[0].callback && node.widgets[0].callback(item.name);
+                
                 infoBar.innerText = item.name.split(/[/\\]/).pop();
+                
+                // 更新选中样式
                 const prev = grid.querySelector(".selected");
                 if (prev) prev.classList.remove("selected");
                 card.classList.add("selected");
+
+                // 启用按钮
+                updateButtonState();
             };
 
             if (item.image) {
@@ -97,22 +129,14 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
         });
     }
 
-    // 【核心修改2：排序逻辑】
     function updateCategories(items) {
         const categories = new Set(["全部"]);
         items.forEach(i => i.category && categories.add(i.category));
-        
-        // 转换数组并进行自定义排序
         const sortedCats = Array.from(categories).sort((a, b) => {
-            // 1. "全部" 永远置顶
             if (a === "全部") return -1;
             if (b === "全部") return 1;
-            
-            // 2. "根目录" 永远第二
             if (a === "根目录") return -1;
             if (b === "根目录") return 1;
-            
-            // 3. 其他按照 A-Z 排序 (支持中文拼音)
             return a.localeCompare(b, "zh-CN");
         });
 
@@ -123,27 +147,106 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
             opt.text = cat;
             categorySelect.appendChild(opt);
         });
-
-        // 【关键】下拉菜单构建完成后，恢复选中的值
         categorySelect.value = currentCategory;
     }
+
+    // --- 注释功能逻辑 (新增) ---
+
+    // 显示模态框函数
+    function showModal(title, content, isEditable, onSave) {
+        const modalOverlay = document.createElement("div");
+        modalOverlay.className = "vl-modal-overlay";
+        
+        const modal = document.createElement("div");
+        modal.className = "vl-modal";
+
+        const header = document.createElement("div");
+        header.className = "vl-modal-header";
+        header.innerText = title;
+
+        const textarea = document.createElement("textarea");
+        textarea.className = "vl-modal-text";
+        textarea.value = content;
+        textarea.readOnly = !isEditable;
+
+        const actions = document.createElement("div");
+        actions.className = "vl-modal-actions";
+
+        const btnClose = document.createElement("button");
+        btnClose.className = "vl-btn";
+        btnClose.innerText = "关闭";
+        btnClose.onclick = () => container.removeChild(modalOverlay);
+
+        actions.appendChild(btnClose);
+
+        if (isEditable) {
+            const btnSave = document.createElement("button");
+            btnSave.className = "vl-btn primary";
+            btnSave.innerText = "保存";
+            btnSave.onclick = async () => {
+                await onSave(textarea.value);
+                container.removeChild(modalOverlay);
+            };
+            actions.appendChild(btnSave);
+        }
+
+        modal.appendChild(header);
+        modal.appendChild(textarea);
+        modal.appendChild(actions);
+        modalOverlay.appendChild(modal);
+        container.appendChild(modalOverlay);
+    }
+
+    async function fetchNoteContent() {
+        try {
+            const res = await api.fetchApi(`/visual_loader/notes?type=${modelType}&name=${encodeURIComponent(selectedModelName)}`);
+            const data = await res.json();
+            return data.content || "";
+        } catch (e) {
+            console.error(e);
+            return "获取注释失败";
+        }
+    }
+
+    btnView.onclick = async () => {
+        if (!selectedModelName) return;
+        const content = await fetchNoteContent();
+        showModal(`查看注释: ${selectedModelName.split(/[/\\]/).pop()}`, content || "(暂无注释)", false);
+    };
+
+    btnEdit.onclick = async () => {
+        if (!selectedModelName) return;
+        const content = await fetchNoteContent();
+        showModal(`编辑注释: ${selectedModelName.split(/[/\\]/).pop()}`, content, true, async (newContent) => {
+            try {
+                await api.fetchApi("/visual_loader/notes", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        type: modelType,
+                        name: selectedModelName,
+                        content: newContent
+                    })
+                });
+            } catch (e) {
+                alert("保存失败: " + e);
+            }
+        });
+    };
 
     // --- 事件绑定 ---
 
     searchInput.addEventListener("input", (e) => {
         searchQuery = e.target.value;
-        // 【核心修改3：状态保存】
         if (savedContext) savedContext.search = searchQuery;
         renderGrid();
     });
     
-    searchInput.addEventListener("keydown", (e) => e.stopPropagation());
+    // 阻止按键冒泡，防止在搜索框打字触发 ComfyUI 快捷键
+    searchInput.addEventListener("keydown", (e) => e.stopPropagation()); 
     
     categorySelect.addEventListener("change", (e) => {
         currentCategory = e.target.value;
-        // 【核心修改3：状态保存】
         if (savedContext) savedContext.category = currentCategory;
-        
         renderGrid();
         grid.scrollTop = 0;
     });
@@ -154,9 +257,9 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
             allItems = data;
             updateCategories(data);
             renderGrid();
-            const currentVal = node.widgets[0].value;
-            if(currentVal) {
-                infoBar.innerText = currentVal.split(/[/\\]/).pop();
+            // 初始化显示的名称
+            if(selectedModelName) {
+                infoBar.innerText = selectedModelName.split(/[/\\]/).pop();
             }
         });
 
