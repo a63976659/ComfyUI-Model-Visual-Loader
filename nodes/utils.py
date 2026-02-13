@@ -14,10 +14,10 @@ if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
 
 # 2. 模型类型映射
-# 【关键修复】增加了 "lora_only" 指向 "loras"
+# 【修复】精简 unet 映射，避免重复扫描相同目录
 TYPE_MAP = {
     "checkpoint": ["checkpoints"],
-    "unet": ["diffusion_models", "unet"],
+    "unet": ["diffusion_models"], # 通常 diffusion_models 已包含所有 UNET/DiT
     "lora": ["loras"],
     "lora_only": ["loras"] 
 }
@@ -57,7 +57,8 @@ def get_cached_image_path(model_path):
 # 4. 获取模型列表
 def get_model_list(model_type):
     data_list = []
-    # 如果类型不存在，默认空列表
+    seen_names = set() # 【关键修复】用于存放已处理的模型名称，防止重复显示
+    
     folders = TYPE_MAP.get(model_type, [])
     
     for folder_name in folders:
@@ -67,7 +68,15 @@ def get_model_list(model_type):
             continue
             
         for filename in filenames:
+            # 【关键修复】如果名称已存在（跨目录重复），则跳过
+            if filename in seen_names:
+                continue
+            
             full_path = folder_paths.get_full_path(folder_name, filename)
+            if not full_path:
+                continue
+
+            seen_names.add(filename)
             
             subfolder = os.path.dirname(filename)
             category = subfolder if subfolder else "根目录"
