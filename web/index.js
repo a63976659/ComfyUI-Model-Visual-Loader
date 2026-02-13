@@ -16,7 +16,7 @@ const TARGET_NODES = {
 };
 
 const OFFSET_MAP = {
-    "checkpoint": 10,   // 已按您的要求改为 10
+    "checkpoint": 10,
     "unet": 10,         
     "lora": 10,         
     "lora_only": 10     
@@ -25,7 +25,6 @@ const OFFSET_MAP = {
 app.registerExtension({
     name: "Comfy.VisualModelLoader",
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
-        
         if (TARGET_NODES[nodeData.name]) {
             const modelType = TARGET_NODES[nodeData.name];
 
@@ -33,20 +32,13 @@ app.registerExtension({
             nodeType.prototype.onNodeCreated = function () {
                 const r = onNodeCreated ? onNodeCreated.apply(this, arguments) : undefined;
                 
-                // 【核心修改】初始化持久化状态对象
-                // 这个对象挂载在 node 实例上，只要节点不被删除，数据就在
                 if (!this.visualContext) {
-                    this.visualContext = {
-                        category: "全部",
-                        search: ""
-                    };
+                    this.visualContext = { category: "全部", search: "" };
                 }
 
                 const topOffset = OFFSET_MAP[modelType] || 10;
-                
                 this.setSize([340, 500 + topOffset]);
 
-                // 【核心修改】将状态对象传递给 DOM 组件
                 const domWidget = createVisualWidget(this, modelType, topOffset, this.visualContext);
                 
                 this.addDOMWidget(modelType + "_selector", "visual_list", domWidget.widget, {
@@ -54,6 +46,20 @@ app.registerExtension({
                     setValue(v) { },
                 });
 
+                return r;
+            };
+
+            // --- 【核心修改】处理工作流加载后的初始同步 ---
+            const onConfigure = nodeType.prototype.onConfigure;
+            nodeType.prototype.onConfigure = function() {
+                const r = onConfigure ? onConfigure.apply(this, arguments) : undefined;
+                if (this.widgets && this.widgets[0]) {
+                    // 确保在工作流数据填入后手动触发一次 callback 以更新视觉 UI
+                    const val = this.widgets[0].value;
+                    if (this.widgets[0].callback) {
+                        this.widgets[0].callback(val);
+                    }
+                }
                 return r;
             };
         }
