@@ -1,85 +1,28 @@
+// dom_widget.js
 import { api } from "../../scripts/api.js";
-import { app } from "../../scripts/app.js";
+import { StateManager } from "./state_manager.js";
+import { UI } from "./ui_builder.js";
 
-// 【调试标记】如果你在控制台(F12)看不到这句话，说明浏览器缓存没清理，请 Ctrl+F5 刷新
-console.log("%c [VisualLoader] JS Loaded - V2026 ", "background: #222; color: #bada55");
+console.log("%c [VisualLoader] Modular JS Loaded ", "background: #222; color: #bada55");
 
 export function createVisualWidget(node, modelType, topPadding, savedContext) {
-    // 1. 创建 UI 容器
-    const container = document.createElement("div");
-    container.className = "visual-loader-container";
-    container.style.top = `${topPadding}px`;
-    container.style.height = `calc(100% - ${topPadding + 10}px)`;
+    // 1. 初始化状态管理
+    const state = new StateManager(modelType, savedContext);
+    let allItems = [];
+    let currentCategory = state.getInitialCategory();
+    let searchQuery = state.getInitialSearch();
+    let selectedModelName = node.widgets?.[0]?.value || "";
 
-    // --- Header ---
-    const header = document.createElement("div");
-    header.className = "vl-header";
+    // 2. 构建 UI 骨架
+    const { container, header, infoBar, grid, footer } = UI.createSkeleton(topPadding);
+    const { categorySelect, searchInput } = UI.createHeaderControls(header);
+    const { btnView, btnEdit } = UI.createFooterButtons(footer);
 
-    const categorySelect = document.createElement("select");
-    categorySelect.className = "vl-select";
-    
-    const searchInput = document.createElement("input");
-    searchInput.className = "vl-search";
-    searchInput.type = "text";
-    searchInput.placeholder = "搜索...";
-
-    header.appendChild(categorySelect);
-    header.appendChild(searchInput);
-
-    // --- Info Bar ---
-    const infoBar = document.createElement("div");
-    infoBar.className = "vl-info-bar";
-    infoBar.innerText = "未选择模型";
-
-    // --- Grid (列表) ---
-    const grid = document.createElement("div");
-    grid.className = "vl-grid";
-
-    // --- Footer ---
-    const footer = document.createElement("div");
-    footer.className = "vl-footer";
-    const btnView = document.createElement("button");
-    btnView.className = "vl-btn";
-    btnView.innerText = "查看注释"; 
-    const btnEdit = document.createElement("button");
-    btnEdit.className = "vl-btn primary";
-    btnEdit.innerText = "修改注释";
-    footer.appendChild(btnView);
-    footer.appendChild(btnEdit);
-
-    container.appendChild(header);
-    container.appendChild(infoBar);
-    container.appendChild(grid);
-    container.appendChild(footer);
-
-    // =========================================================
-    // 状态管理 (LocalStorage)
-    // =========================================================
-    const KEY_CAT = `ComfyVL_${modelType}_Cat`;
-    const KEY_SCROLL = `ComfyVL_${modelType}_Scroll`;
-
-    // 读取缓存 (优先 localStorage > savedContext > "全部")
-    let currentCategory = "全部";
-    try {
-        const localCat = localStorage.getItem(KEY_CAT);
-        if (localCat) currentCategory = localCat;
-        else if (savedContext?.category) currentCategory = savedContext.category;
-    } catch (e) {}
-
-    let searchQuery = savedContext?.search || "";
-    // 安全获取 widget 值
-    let selectedModelName = "";
-    if (node.widgets && node.widgets[0]) {
-        selectedModelName = node.widgets[0].value;
-    }
-
+    // 恢复搜索框值
     searchInput.value = searchQuery;
 
-    // 数据容器
-    let allItems = [];
-
     // =========================================================
-    // 核心逻辑函数
+    // 业务逻辑方法
     // =========================================================
 
     function updateButtonState() {
@@ -87,13 +30,13 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
         btnView.disabled = !hasSelection;
         btnEdit.disabled = !hasSelection;
     }
-    // 初始化按钮状态
     updateButtonState();
 
     function syncSelection(name) {
         selectedModelName = name;
         infoBar.innerText = name ? name.split(/[/\\]/).pop() : "未选择模型";
         
+        // 更新高亮
         const cards = grid.querySelectorAll(".vl-card");
         cards.forEach(card => {
             if (card.dataset.name === name) card.classList.add("selected");
@@ -121,38 +64,19 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
         });
 
         filtered.forEach(item => {
-            const card = document.createElement("div");
-            card.className = "vl-card";
-            card.dataset.name = item.name;
-
-            if (selectedModelName === item.name) card.classList.add("selected");
-
-            card.onclick = () => {
-                if (node.widgets && node.widgets[0]) {
-                    node.widgets[0].value = item.name;
-                    if (node.widgets[0].callback) node.widgets[0].callback(item.name);
-                }
-            };
-
-            if (item.image) {
-                const img = document.createElement("img");
-                img.src = item.image;
-                img.loading = "lazy";
-                // 【关键优化】图片加载完成后，如果发现需要恢复滚动，再尝试一次
-                img.onload = () => restoreScrollPosition(false); 
-                card.appendChild(img);
-            } else {
-                const placeholder = document.createElement("div");
-                placeholder.style.backgroundColor = "#444";
-                placeholder.style.height = "100%";
-                card.appendChild(placeholder);
-            }
-
-            const title = document.createElement("div");
-            title.className = "vl-card-title";
-            title.innerText = item.name.split(/[/\\]/).pop();
-            card.appendChild(title);
-
+            const card = UI.createCard(
+                item, 
+                selectedModelName === item.name,
+                // 点击回调
+                () => {
+                    if (node.widgets?.[0]) {
+                        node.widgets[0].value = item.name;
+                        node.widgets[0].callback?.(item.name);
+                    }
+                },
+                // 图片加载回调 (用于触发滚动恢复)
+                () => state.restoreScroll(grid)
+            );
             grid.appendChild(card);
         });
     }
@@ -178,28 +102,12 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
             if (cat === currentCategory) isCurrentValid = true;
         });
 
-        // 如果之前的文件夹不见了，重置为全部
         if (isCurrentValid) {
             categorySelect.value = currentCategory;
         } else {
             currentCategory = "全部";
             categorySelect.value = "全部";
-        }
-    }
-
-    // --- 滚动条恢复逻辑 (多重保障) ---
-    function restoreScrollPosition(force = false) {
-        const savedScroll = localStorage.getItem(KEY_SCROLL);
-        if (!savedScroll) return;
-
-        const target = parseInt(savedScroll);
-        if (target <= 0) return;
-
-        // 如果当前内容高度足以支持滚动
-        if (grid.scrollHeight > grid.clientHeight) {
-            if (Math.abs(grid.scrollTop - target) > 10) {
-                grid.scrollTop = target;
-            }
+            state.saveCategory("全部");
         }
     }
 
@@ -209,70 +117,27 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
 
     categorySelect.addEventListener("change", (e) => {
         currentCategory = e.target.value;
-        if (savedContext) savedContext.category = currentCategory;
-        localStorage.setItem(KEY_CAT, currentCategory);
-        
-        // 切换分类归零滚动条
-        grid.scrollTop = 0;
-        localStorage.setItem(KEY_SCROLL, 0);
+        state.saveCategory(currentCategory);
+        grid.scrollTop = 0; // 切换分类强制回顶
         renderGrid();
     });
 
     let scrollTimer;
-    grid.addEventListener("scroll", (e) => {
+    grid.addEventListener("scroll", () => {
         clearTimeout(scrollTimer);
         scrollTimer = setTimeout(() => {
-            localStorage.setItem(KEY_SCROLL, grid.scrollTop);
+            state.saveScroll(grid.scrollTop);
         }, 200);
     });
 
     searchInput.addEventListener("input", (e) => {
         searchQuery = e.target.value;
-        if (savedContext) savedContext.search = searchQuery;
+        state.saveSearch(searchQuery);
         renderGrid();
     });
-    searchInput.addEventListener("keydown", (e) => e.stopPropagation()); 
+    searchInput.addEventListener("keydown", (e) => e.stopPropagation());
 
-    // =========================================================
-    // 注释弹窗功能
-    // =========================================================
-    function showModal(title, content, isEditable, onSave) {
-        const overlay = document.createElement("div");
-        overlay.className = "vl-modal-overlay";
-        const modal = document.createElement("div");
-        modal.className = "vl-modal";
-        
-        const h = document.createElement("div");
-        h.className = "vl-modal-header";
-        h.innerText = title;
-        
-        const txt = document.createElement("textarea");
-        txt.className = "vl-modal-text";
-        txt.value = content;
-        txt.readOnly = !isEditable;
-        
-        const acts = document.createElement("div");
-        acts.className = "vl-modal-actions";
-        
-        const cls = document.createElement("button");
-        cls.className = "vl-btn";
-        cls.innerText = "关闭";
-        cls.onclick = () => overlay.remove();
-        acts.appendChild(cls);
-
-        if (isEditable) {
-            const save = document.createElement("button");
-            save.className = "vl-btn primary";
-            save.innerText = "保存";
-            save.onclick = async () => { await onSave(txt.value); overlay.remove(); };
-            acts.appendChild(save);
-        }
-        
-        modal.append(h, txt, acts);
-        overlay.appendChild(modal);
-        container.appendChild(overlay);
-    }
-
+    // 注释功能
     async function getNote() {
         try {
             const r = await api.fetchApi(`/visual_loader/notes?type=${modelType}&name=${encodeURIComponent(selectedModelName)}`);
@@ -284,13 +149,13 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
     btnView.onclick = async () => {
         if (!selectedModelName) return;
         const c = await getNote();
-        showModal("查看: " + selectedModelName, c || "无注释", false);
+        UI.showModal(container, "查看: " + selectedModelName, c || "无注释", false);
     };
 
     btnEdit.onclick = async () => {
         if (!selectedModelName) return;
         const c = await getNote();
-        showModal("编辑: " + selectedModelName, c, true, async (val) => {
+        UI.showModal(container, "编辑: " + selectedModelName, c, true, async (val) => {
              try {
                 await api.fetchApi("/visual_loader/notes", {
                     method: "POST",
@@ -301,7 +166,7 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
     };
 
     // =========================================================
-    // 启动加载
+    // 启动数据加载
     // =========================================================
     api.fetchApi(`/visual_loader/models?type=${modelType}`)
         .then(res => res.json())
@@ -310,10 +175,9 @@ export function createVisualWidget(node, modelType, topPadding, savedContext) {
             updateCategories(data);
             renderGrid();
             if (selectedModelName) syncSelection(selectedModelName);
-
-            // 尝试恢复滚动 (多次尝试以应对渲染延迟)
-            setTimeout(() => restoreScrollPosition(true), 100);
-            setTimeout(() => restoreScrollPosition(true), 500);
+            
+            // 初始滚动恢复
+            state.restoreScroll(grid);
         })
         .catch(err => {
             console.error(err);
