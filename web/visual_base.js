@@ -203,7 +203,7 @@ export const UI = {
             row.className = "vl-stack-item";
             const inputsDiv = document.createElement("div");
             inputsDiv.className = "vl-stack-inputs";
-            inputsDiv.appendChild(createInput(data.strength_model, "模型", "model"));
+            inputsDiv.appendChild(createInput(data.strength_model, "模型强度", "model"));
             row.append(nameDiv, inputsDiv, delBtn);
             return row;
         } else {
