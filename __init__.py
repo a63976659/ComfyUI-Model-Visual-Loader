@@ -31,7 +31,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Lora加载器": "Lora加载器",
     "Lora加载器_仅模型": "Lora加载器(仅模型)",
     "Lora堆加载器": "Lora堆加载器",
-    "Lora堆加载器_仅模型": "Lora堆(仅模型)"
+    "Lora堆加载器_仅模型": "Lora堆加载器(仅模型)"
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
