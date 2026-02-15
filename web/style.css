@@ -1,0 +1,112 @@
+/* js/style.css */
+
+.visual-loader-container {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95%;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 10px; 
+    box-sizing: border-box;
+    color: #ddd;
+    font-family: Arial, sans-serif;
+    gap: 10px;
+    z-index: 1; 
+}
+
+/* --- Header Area --- */
+.vl-header { display: flex; gap: 8px; flex-shrink: 0; height: 28px; min-height: 28px; }
+.vl-select { width: 35%; background: #333; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 0 4px; font-size: 12px; outline: none; cursor: pointer; height: 100%; }
+.vl-search { flex: 1; background: #000; border: 1px solid #444; border-radius: 14px; color: #fff; padding: 0 12px; font-size: 12px; outline: none; height: 100%; }
+.vl-search:focus { border-color: #4AF; }
+
+/* --- Info Bar --- */
+.vl-info-bar { background: #1a1a1a; color: #fff; text-align: center; font-size: 11px; display: flex; align-items: center; justify-content: center; height: 30px; flex-shrink: 0; border-radius: 4px; border: 1px solid #333; cursor: default; white-space: nowrap; overflow: hidden; }
+
+/* --- Grid Area --- */
+.vl-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); grid-auto-rows: max-content; gap: 8px; padding-right: 4px; padding-bottom: 4px; border-top: 1px solid #333; padding-top: 8px; }
+.vl-grid::-webkit-scrollbar { width: 6px; }
+.vl-grid::-webkit-scrollbar-track { background: transparent; }
+.vl-grid::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
+.vl-grid::-webkit-scrollbar-thumb:hover { background: #777; }
+
+/* --- Card Styles (核心修复区域) --- */
+.vl-card {
+    position: relative;
+    background: #333;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    /* 【修复】改用 all transition，并不再使用 translateY 避免边缘闪烁 */
+    transition: all 0.1s ease-in-out;
+    aspect-ratio: 1 / 1; 
+    border: 2px solid transparent;
+    /* 增加 z-index 防止缩放时被遮挡（虽然在 grid 中通常会被裁剪，但在 hover 时更有利）*/
+    z-index: 1;
+}
+
+.vl-card:hover {
+    filter: brightness(1.15); /*稍微增加亮度提升反馈感*/
+    /* 【关键修复】
+       原先的 transform: translateY(-2px); 会导致鼠标在边缘时频繁触发 hover/leave。
+       改为 scale(1.02) 从中心略微放大，或者完全移除位移。
+       这里使用 scale(1.02) 既保留动效又不会导致底部边缘脱离鼠标。
+    */
+    transform: scale(1.02); 
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.vl-card.selected {
+    border-color: #4AF;
+    box-shadow: 0 0 8px rgba(74, 175, 255, 0.4);
+    /* 选中状态也保持一点微小的放大，突出显示 */
+    transform: scale(1.02);
+    z-index: 2;
+}
+
+.vl-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vl-card-title { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(2px); color: #eee; font-size: 10px; padding: 4px 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* --- Footer & Buttons --- */
+.vl-footer { height: 30px; flex-shrink: 0; display: flex; gap: 8px; margin-top: 2px; }
+.vl-btn { flex: 1; background: #444; color: #eee; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; }
+.vl-btn:hover:not(:disabled) { background: #555; }
+.vl-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+.vl-btn.primary { background: #2a6; color: #fff; }
+.vl-btn.primary:hover:not(:disabled) { background: #3b7; }
+
+/* --- Modal Overlay --- */
+.vl-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10; display: flex; justify-content: center; align-items: center; }
+.vl-modal { width: 85%; height: 80%; background: #252525; border-radius: 8px; display: flex; flex-direction: column; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #444; }
+.vl-modal-header { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: #ddd; border-bottom: 1px solid #444; padding-bottom: 6px; }
+.vl-modal-text { flex: 1; background: #111; color: #ccc; border: 1px solid #444; border-radius: 4px; resize: none; padding: 8px; font-family: monospace; font-size: 12px; outline: none; }
+.vl-modal-text:focus { border-color: #4AF; }
+.vl-modal-actions { display: flex; gap: 10px; margin-top: 8px; height: 28px; }
+
+/* ========================================= */
+/* 堆叠模式专用样式 (Stack Mode) */
+/* ========================================= */
+
+.vl-middle-bar { height: 30px; flex-shrink: 0; display: flex; gap: 8px; padding: 4px 0; border-top: 1px solid #333; background: #222; }
+.vl-stack-container { height: 160px; min-height: 140px; background: #181818; border-top: 1px solid #444; overflow-y: auto; display: flex; flex-direction: column; padding: 4px; gap: 4px; }
+
+/* === 方案 A: 仅模型 (单行设计) === */
+.vl-stack-item { display: flex; align-items: center; background: #333; border-radius: 4px; padding: 4px 8px; gap: 8px; flex-shrink: 0; }
+.vl-stack-name { flex: 1; font-size: 11px; color: #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 60px; }
+.vl-stack-inputs { display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+.vl-stack-input-wrap { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #aaa; }
+.vl-stack-input { width: 42px; background: #222; border: 1px solid #444; color: #fff; border-radius: 2px; font-size: 11px; padding: 2px; text-align: center; }
+.vl-stack-input:focus { border-color: #4AF; outline: none; }
+.vl-stack-del { background: transparent; border: none; color: #888; font-size: 16px; cursor: pointer; line-height: 1; padding: 0 4px; margin-left: 4px; }
+.vl-stack-del:hover { color: #f55; }
+
+/* === 方案 B: 双参数 (新设计：双层布局) === */
+.vl-stack-item.stack-dual { flex-direction: column; align-items: stretch; gap: 4px; padding: 6px 8px; }
+.vl-stack-dual-header { display: flex; align-items: center; justify-content: space-between; width: 100%; border-bottom: 1px solid #444; padding-bottom: 2px; margin-bottom: 2px; }
+.vl-stack-dual-body { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vl-stack-dual-body .vl-stack-input-wrap { flex: 1; justify-content: center; background: #2a2a2a; border-radius: 3px; padding: 2px 4px; }
+.vl-stack-dual-body .vl-stack-input-wrap span { color: #ccc; }

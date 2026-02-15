@@ -34,8 +34,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Lora加载器": "LoRA 加载器",
     "Lora加载器_仅模型": "LoRA 加载器 (仅模型)",
     # 新增映射
-    "LoRA堆叠加载器": "LoRA 堆叠加载器 (Visual)",
-    "LoRA堆叠加载器_仅模型": "LoRA 堆叠 (仅模型) (Visual)"
+    "LoRA堆叠加载器": "LoRA 堆叠加载器",
+    "LoRA堆叠加载器_仅模型": "LoRA 堆叠 (仅模型)"
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
