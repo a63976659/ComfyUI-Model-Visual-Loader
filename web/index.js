@@ -1,5 +1,4 @@
 import { app } from "../../scripts/app.js";
-// 分别导入两个不同的控制器
 import { createSingleWidget } from "./visual_single.js";
 import { createStackWidget } from "./visual_stack.js";
 
@@ -15,8 +14,9 @@ const TARGET_NODES = {
     "UNET加载器": "unet",
     "Lora加载器": "lora",
     "Lora加载器_仅模型": "lora_only",
-    "LoRA堆叠加载器": "lora_stack", 
-    "LoRA堆叠加载器_仅模型": "lora_stack_model_only"
+    // 修改为 "Lora堆..."
+    "Lora堆加载器": "lora_stack", 
+    "Lora堆加载器_仅模型": "lora_stack_model_only"
 };
 
 const OFFSET_MAP = {
@@ -40,11 +40,9 @@ app.registerExtension({
                 }
 
                 const topOffset = OFFSET_MAP[modelType] || 10;
-                // 堆叠节点稍微高一点
                 const height = isStack ? 520 : 500;
                 this.setSize([340, height + topOffset]);
 
-                // 【核心路由】根据类型选择不同的控制器
                 const widgetFactory = isStack ? createStackWidget : createSingleWidget;
                 const domWidget = widgetFactory(this, modelType, topOffset, this.visualContext);
                 
