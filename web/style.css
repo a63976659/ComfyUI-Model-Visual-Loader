@@ -1,6 +1,5 @@
 /* js/style.css */
 
-/* 保持原有样式... */
 .visual-loader-container {
     position: absolute;
     left: 50%;
@@ -19,6 +18,7 @@
     z-index: 1; 
 }
 
+/* --- Header Area --- */
 .vl-header {
     display: flex;
     gap: 8px;
@@ -55,6 +55,7 @@
     border-color: #4AF;
 }
 
+/* --- Info Bar --- */
 .vl-info-bar {
     background: #1a1a1a;
     color: #fff;
@@ -72,6 +73,7 @@
     overflow: hidden;
 }
 
+/* --- Grid Area --- */
 .vl-grid {
     flex: 1; 
     min-height: 0; 
@@ -86,12 +88,13 @@
     padding-top: 8px;
 }
 
-/* 滚动条样式 */
+/* Scrollbar Styles */
 .vl-grid::-webkit-scrollbar { width: 6px; }
 .vl-grid::-webkit-scrollbar-track { background: transparent; }
 .vl-grid::-webkit-scrollbar-thumb { background: #555; border-radius: 3px; }
 .vl-grid::-webkit-scrollbar-thumb:hover { background: #777; }
 
+/* --- Card Styles --- */
 .vl-card {
     position: relative;
     background: #333;
@@ -132,7 +135,7 @@
     text-overflow: ellipsis;
 }
 
-/* --- 新增样式: Footer & Buttons --- */
+/* --- Footer & Buttons --- */
 .vl-footer {
     height: 30px;
     flex-shrink: 0;
@@ -150,6 +153,10 @@
     cursor: pointer;
     font-size: 12px;
     transition: background 0.2s;
+    /* 居中文字 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .vl-btn:hover:not(:disabled) {
     background: #555;
@@ -167,7 +174,7 @@
     background: #3b7;
 }
 
-/* --- 新增样式: Modal Overlay --- */
+/* --- Modal Overlay --- */
 .vl-modal-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -220,4 +227,102 @@
     gap: 10px;
     margin-top: 8px;
     height: 28px;
+}
+
+/* ========================================= */
+/* 堆叠模式专用样式 (Stack Mode)       */
+/* ========================================= */
+
+/* 中间功能栏 */
+.vl-middle-bar {
+    height: 30px;
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+    padding: 4px 0;
+    border-top: 1px solid #333;
+    background: #222;
+}
+
+/* 堆叠容器 (列表区) */
+.vl-stack-container {
+    height: 160px; /* 增加高度以容纳更多内容 */
+    min-height: 140px;
+    background: #181818;
+    border-top: 1px solid #444;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+    gap: 4px;
+}
+
+/* 列表单项 */
+.vl-stack-item {
+    display: flex;
+    align-items: center;
+    background: #333;
+    border-radius: 4px;
+    padding: 4px 8px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* 模型名称 */
+.vl-stack-name {
+    flex: 1;
+    font-size: 11px;
+    color: #eee;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 60px; /* 保证名称至少有一定宽度 */
+}
+
+/* 输入框容器 (包裹 模型 + CLIP) */
+.vl-stack-inputs {
+    display: flex;
+    gap: 12px; /* 增加间距，防止两个输入框挤在一起 */
+    align-items: center;
+    flex-shrink: 0; /* 防止被名称挤压 */
+}
+
+/* 单个输入项 (标签 + 输入框) */
+.vl-stack-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: #aaa;
+}
+
+/* 输入框本体 */
+.vl-stack-input {
+    width: 42px; /* 稍微调窄以适应中文标签 */
+    background: #222;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 2px;
+    font-size: 11px;
+    padding: 2px;
+    text-align: center;
+}
+.vl-stack-input:focus {
+    border-color: #4AF;
+    outline: none;
+}
+
+/* 删除按钮 */
+.vl-stack-del {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 16px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    margin-left: 4px;
+}
+.vl-stack-del:hover {
+    color: #f55;
 }
