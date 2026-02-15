@@ -9,17 +9,16 @@ export function normalizePath(path) {
 }
 
 // =========================================================
-// 状态管理器 (核心修复：增加 saveSelection 实现即时记忆)
+// 状态管理器
 // =========================================================
 export class StateManager {
     constructor(nodeId, modelType, savedContext) {
         const safeId = nodeId || "global"; 
-        // 生成唯一的 Key，包含 modelType 和 nodeId，互不冲突
         this.prefix = `ComfyVL_${modelType}_${safeId}_`;
         this.savedContext = savedContext;
     }
 
-    // --- 分类相关 ---
+    // --- 分类 ---
     getInitialCategory() {
         try {
             const val = localStorage.getItem(this.prefix + "Cat");
@@ -31,10 +30,10 @@ export class StateManager {
 
     saveCategory(val) {
         localStorage.setItem(this.prefix + "Cat", val);
-        this.saveScroll(0); // 切换分类重置滚动
+        this.saveScroll(0); 
     }
 
-    // --- 搜索相关 ---
+    // --- 搜索 ---
     getInitialSearch() {
         return this.savedContext?.search || "";
     }
@@ -43,7 +42,7 @@ export class StateManager {
         if (this.savedContext) this.savedContext.search = val;
     }
 
-    // --- 滚动条相关 ---
+    // --- 滚动条 ---
     saveScroll(val) {
         localStorage.setItem(this.prefix + "Scroll", val);
     }
@@ -61,11 +60,10 @@ export class StateManager {
                 }
             }
         };
-        // 多次尝试应对渲染延迟
         [0, 100, 300, 600].forEach(t => setTimeout(attempt, t));
     }
 
-    // --- 【新增】单选值即时记忆 (解决刷新回档问题) ---
+    // --- 选中项 ---
     getLastSelection() {
         return localStorage.getItem(this.prefix + "Sel");
     }
@@ -76,7 +74,7 @@ export class StateManager {
 }
 
 // =========================================================
-// UI 构建器 (包含双层布局支持)
+// UI 构建器
 // =========================================================
 export const UI = {
     createSkeleton(topPadding, isStackMode = false) {
@@ -200,16 +198,16 @@ export const UI = {
         nameDiv.title = data.name;
 
         if (!hasClip) {
-            // 单行模式 (仅模型)
+            // 单行模式
             const row = document.createElement("div");
             row.className = "vl-stack-item";
             const inputsDiv = document.createElement("div");
             inputsDiv.className = "vl-stack-inputs";
-            inputsDiv.appendChild(createInput(data.strength_model, "模型强度", "model"));
+            inputsDiv.appendChild(createInput(data.strength_model, "模型", "model"));
             row.append(nameDiv, inputsDiv, delBtn);
             return row;
         } else {
-            // 双层模式 (模型 + CLIP)
+            // 双层模式
             const col = document.createElement("div");
             col.className = "vl-stack-item stack-dual";
             const hRow = document.createElement("div");
@@ -259,23 +257,36 @@ export const UI = {
     }
 };
 
-// 简单的 API 封装
+// =========================================================
+// VisualAPI - 负责前后端通信
+// =========================================================
 export const VisualAPI = {
+    // 获取模型列表
     async getModels(type) {
+        // 后端不需要知道 lora_stack，只知道 lora
+        if (type.includes("stack")) type = "lora";
         const res = await api.fetchApi(`/visual_loader/models?type=${type}`);
         return await res.json();
     },
+
+    // 获取注释
     async getNote(type, name) {
         try {
-            const res = await api.fetchApi(`/visual_loader/notes?type=${type}&name=${encodeURIComponent(name)}`);
+            // 【修正】确保堆叠模式下的类型被转换为 lora
+            const apiType = type.includes("stack") ? "lora" : type;
+            const res = await api.fetchApi(`/visual_loader/notes?type=${apiType}&name=${encodeURIComponent(name)}`);
             const d = await res.json();
             return d.content || "";
         } catch { return ""; }
     },
+
+    // 保存注释
     async saveNote(type, name, content) {
-        await api.fetchApi("/visual_loader/notes", {
+        const apiType = type.includes("stack") ? "lora" : type;
+        const res = await api.fetchApi("/visual_loader/notes", {
             method: "POST",
-            body: JSON.stringify({ type, name, content })
+            body: JSON.stringify({ type: apiType, name, content })
         });
+        if (res.status !== 200) throw new Error("Server Error");
     }
 };
