@@ -1,6 +1,7 @@
 # ComfyUI-Model-Visual-Loader
 ComfyUI模型加载带预览图功能节点
  是一款专为 ComfyUI 用户打造的高效可视化模型加载插件，通过直观的缩略图预览和强大的分类搜索功能，将繁琐的模型选择过程转化为愉悦的视觉体验。
+ # [![Bilibili](https://img.shields.io/badge/bilibili-猪的飞行梦-00A1D6?logo=bilibili&logoColor=white)](https://space.bilibili.com/2114638644)
 
 ---
 
@@ -121,6 +122,7 @@ git clone https://github.com/a63976659/ComfyUI-Model-Visual-Loader.git
 **作者**：a63976659  
 - [小红书：猪的飞行梦] 
 - [哔哩哔哩主页：https://space.bilibili.com/2114638644]
+- [![Bilibili](https://img.shields.io/badge/bilibili-猪的飞行梦-00A1D6?logo=bilibili&logoColor=white)](https://space.bilibili.com/2114638644)
 
 **致谢**：感谢所有测试用户和贡献者！
 如果你觉得插件还不错可以点个收藏。
