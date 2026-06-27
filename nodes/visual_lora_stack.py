@@ -3,6 +3,15 @@ import comfy.sd
 import comfy.utils
 import json
 
+
+def _safe_float(value, default=1.0):
+    """安全地将值转换为浮点数，失败时返回默认值"""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
 class LoRA堆叠加载器:
     def __init__(self):
         self.loaded_lora = None
@@ -41,8 +50,8 @@ class LoRA堆叠加载器:
         # 2. 循环加载堆叠
         for item in lora_list:
             lora_name = item.get("name")
-            strength_model = float(item.get("strength_model", 1.0))
-            strength_clip = float(item.get("strength_clip", 1.0))
+            strength_model = _safe_float(item.get("strength_model"), 1.0)
+            strength_clip = _safe_float(item.get("strength_clip"), 1.0)
 
             if strength_model == 0 and strength_clip == 0:
                 continue
@@ -87,7 +96,7 @@ class LoRA堆叠加载器_仅模型:
         
         for item in lora_list:
             lora_name = item.get("name")
-            strength_model = float(item.get("strength_model", 1.0))
+            strength_model = _safe_float(item.get("strength_model"), 1.0)
             
             if strength_model == 0: continue
 

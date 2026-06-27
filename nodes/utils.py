@@ -57,11 +57,19 @@ def get_cached_image_path(model_path):
     cache_filename = hash_name + ".png"
     cache_path = os.path.join(CACHE_DIR, cache_filename)
     
-    # 转换为 Web 访问路径
-    web_path = f"/visual_loader/view_cache?filename={cache_filename}"
+    # 转换为 Web 访问路径（加时间戳防止浏览器缓存旧图片）
+    web_path = f"/visual_loader/view_cache?filename={cache_filename}&t={int(os.path.getmtime(image_source))}"
 
     if os.path.exists(cache_path):
-        return web_path
+        try:
+            image_mtime = os.path.getmtime(image_source)
+            cache_mtime = os.path.getmtime(cache_path)
+            # 缓存生成时会把 mtime 设为和源图一致，所以相等表示未变化
+            if cache_mtime == image_mtime:
+                return web_path
+            # mtime 不一致，说明源图被替换过，重新生成
+        except OSError:
+            pass  # 获取文件信息失败，继续重新生成缓存
 
     try:
         img = Image.open(image_source)
@@ -74,6 +82,12 @@ def get_cached_image_path(model_path):
         img.thumbnail(max_size)
         
         img.save(cache_path, "PNG")
+        # 把缓存文件的修改时间设为和源图一致，方便下次判断源图是否变化
+        try:
+            src_mtime = os.path.getmtime(image_source)
+            os.utime(cache_path, (src_mtime, src_mtime))
+        except OSError:
+            pass
         return web_path
     except Exception as e:
         print(f"[VisualLoader] 图片缓存失败: {e}")
@@ -133,10 +147,18 @@ async def api_view_cache(request):
     filename = request.rel_url.query.get("filename")
     if not filename:
         return web.Response(status=404)
-        
+
+    # 防止路径遍历：只允许纯文件名
+    filename = os.path.basename(filename)
+
     file_path = os.path.join(CACHE_DIR, filename)
-    if os.path.exists(file_path):
-        return web.FileResponse(file_path)
+    # 二次防御：确保真实路径在 CACHE_DIR 内
+    real_path = os.path.realpath(file_path)
+    if not real_path.startswith(os.path.realpath(CACHE_DIR) + os.sep):
+        return web.Response(status=403)
+
+    if os.path.exists(real_path):
+        return web.FileResponse(real_path)
     return web.Response(status=404)
 
 # 【新增】获取注释
