@@ -4,17 +4,21 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
     const state = new StateManager(node.id, modelType, savedContext);
     
     // 【关键修复 step 1】
-    // 在一开始就死死锁住 LocalStorage 里的值，存为“真理值”
+    // 在一开始就锁住 LocalStorage 里的值，存为"真理值"
     // 这个值绝对不能被后续 ComfyUI 的 callback 污染
-    const TRUTH_VALUE = state.getLastSelection(); 
-    
+    let TRUTH_VALUE = state.getLastSelection(); 
+        
     // 如果本地有值，优先用本地的；否则用 ComfyUI 传来的
     let selectedValue = TRUTH_VALUE || (node.widgets?.[0]?.value || "");
-    
+        
     let allItems = [];
     let currentCategory = state.getInitialCategory();
     let searchQuery = state.getInitialSearch();
     let isInitializing = true; // 增加初始化标记
+    let isUserSelecting = false; // 标记用户正在主动选择
+
+    // 防抖滚动恢复：避免每张图片 onload 都重复触发
+    let _scrollRestoreTimer = null;
 
     // 构建 UI
     const { container, header, infoBar, grid, footer, middleBtns } = UI.createSkeleton(topPadding, false);
@@ -61,6 +65,7 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
                 // OnClick
                 () => {
                     const name = item.name;
+                    isUserSelecting = true;
                     // 1. 更新 Widget
                     if (node.widgets?.[0]) {
                         node.widgets[0].value = name;
@@ -69,6 +74,7 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
                     
                     // 2. 立即保存状态 (这是最权威的操作)
                     state.saveSelection(name);
+                    TRUTH_VALUE = name; // 真理值随用户操作更新
                     
                     // 3. 顺便保存分类
                     if (item.category) {
@@ -79,8 +85,12 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
                     
                     // 4. 手动同步视觉 (防止 callback 延迟)
                     syncSelection(name);
+                    isUserSelecting = false;
                 },
-                () => state.restoreScroll(grid)
+                () => {
+                    clearTimeout(_scrollRestoreTimer);
+                    _scrollRestoreTimer = setTimeout(() => state.restoreScroll(grid), 150);
+                }
             );
             grid.appendChild(card);
         });
@@ -136,19 +146,27 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
         const w = node.widgets[0];
         const origin = w.callback;
         w.callback = function(v) {
+            // 用户主动选择时不拦截
+            if (isUserSelecting) {
+                state.saveSelection(v);
+                TRUTH_VALUE = v;
+                syncSelection(v);
+                if (origin) origin.apply(this, arguments);
+                return;
+            }
             // 如果处于初始化阶段，且传入的值(v) 与我们记录的真理值(TRUTH_VALUE) 不一致
             // 说明这是 ComfyUI 在用旧数据覆盖我们，必须拦截！
             if (isInitializing && TRUTH_VALUE && normalizePath(v) !== normalizePath(TRUTH_VALUE)) {
                 console.log(`[VisualLoader] 拦截到旧数据覆盖: ${v}, 强制保持: ${TRUTH_VALUE}`);
-                // 此时不仅不更新 UI，还要把 Widget 的值改回真理值
                 if (node.widgets[0].value !== TRUTH_VALUE) {
                     node.widgets[0].value = TRUTH_VALUE;
                 }
                 return; // 拒绝执行后续逻辑
             }
 
-            // 正常操作：用户手动修改，或初始化完成后的更新
+            // 正常操作：初始化完成后的更新
             state.saveSelection(v);
+            TRUTH_VALUE = v;
             syncSelection(v);
             if (origin) origin.apply(this, arguments);
         };
@@ -181,6 +199,11 @@ export function createSingleWidget(node, modelType, topPadding, savedContext) {
             if (node.widgets?.[0]) {
                 node.widgets[0].value = TRUTH_VALUE;
             }
+        } else if (selectedValue) {
+            // 无本地真理值但节点已有值，用节点值恢复 UI
+            syncSelection(selectedValue);
+            state.saveSelection(selectedValue);
+            TRUTH_VALUE = selectedValue;
         }
         
         renderGrid();

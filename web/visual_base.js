@@ -265,8 +265,13 @@ export const VisualAPI = {
     async getModels(type) {
         // 后端不需要知道 lora_stack，只知道 lora
         if (type.includes("stack")) type = "lora";
-        const res = await api.fetchApi(`/visual_loader/models?type=${type}`);
-        return await res.json();
+        try {
+            const res = await api.fetchApi(`/visual_loader/models?type=${type}`);
+            return await res.json();
+        } catch (e) {
+            console.error("[VisualLoader] 获取模型列表失败:", e);
+            return [];
+        }
     },
 
     // 获取注释
@@ -283,10 +288,15 @@ export const VisualAPI = {
     // 保存注释
     async saveNote(type, name, content) {
         const apiType = type.includes("stack") ? "lora" : type;
-        const res = await api.fetchApi("/visual_loader/notes", {
-            method: "POST",
-            body: JSON.stringify({ type: apiType, name, content })
-        });
-        if (res.status !== 200) throw new Error("Server Error");
+        try {
+            const res = await api.fetchApi("/visual_loader/notes", {
+                method: "POST",
+                body: JSON.stringify({ type: apiType, name, content })
+            });
+            if (res.status !== 200) throw new Error("Server Error");
+        } catch (e) {
+            console.error("[VisualLoader] 保存注释失败:", e);
+            throw e;
+        }
     }
 };

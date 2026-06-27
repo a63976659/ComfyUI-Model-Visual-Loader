@@ -5,10 +5,15 @@ import torch # 必须导入 torch 以支持权重类型转换
 class UNET加载器:
     @classmethod
     def INPUT_TYPES(s):
+        dtype_list = ["default"]
+        if hasattr(torch, "float8_e4m3fn"):
+            dtype_list.extend(["fp8_e4m3fn", "fp8_e4m3fn_fast"])
+        if hasattr(torch, "float8_e5m2"):
+            dtype_list.append("fp8_e5m2")
         return {
             "required": {
                 "UNET名称": (folder_paths.get_filename_list("diffusion_models"), ),
-                "权重类型": (["default", "fp8_e4m3fn", "fp8_e4m3fn_fast", "fp8_e5m2"],)
+                "权重类型": (dtype_list,)
             }
         }
     

@@ -35,7 +35,8 @@ def get_note_path(folder_type, filename):
         # 将后缀替换为 .txt
         base_path = os.path.splitext(model_path)[0]
         return base_path + ".txt"
-    except:
+    except Exception as e:
+        print(f"[VisualLoader] 错误: {e}")
         return None
 
 # 4. 获取并缓存图片的函数 (保持不变)
@@ -104,7 +105,8 @@ def get_model_list(model_type):
     # 获取该类型下的所有文件名
     try:
         filenames = folder_paths.get_filename_list(folder_type)
-    except:
+    except Exception as e:
+        print(f"[VisualLoader] 错误: {e}")
         return []
 
     for filename in filenames:
@@ -206,4 +208,4 @@ async def api_save_notes(request):
         
     except Exception as e:
         print(f"[VisualLoader] 保存注释失败: {e}")
-        return web.Response(status=500, text=str(e))
+        return web.Response(status=500, text="保存失败")

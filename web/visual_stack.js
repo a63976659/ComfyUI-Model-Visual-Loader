@@ -20,7 +20,7 @@ export function createStackWidget(node, modelType, topPadding, savedContext) {
     let searchQuery = state.getInitialSearch();
     
     // 数据源
-    let selectedJson = node.widgets?.[0]?.value || "[]";
+    let selectedJson = (node.widgets?.find(w => w.name === "lora_stack_config") || node.widgets?.[0])?.value || "[]";
     let stackData = [];
     try { stackData = JSON.parse(selectedJson); } catch {}
     if (!Array.isArray(stackData)) stackData = [];

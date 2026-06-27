@@ -2,6 +2,24 @@ import folder_paths
 import comfy.sd
 import comfy.utils
 import json
+from collections import OrderedDict
+
+
+# LoRA 文件缓存（LRU，最多10个）
+_lora_cache = OrderedDict()
+_LORA_CACHE_MAX = 10
+
+
+def _load_lora_cached(lora_path):
+    """带 LRU 缓存的 LoRA 加载"""
+    if lora_path in _lora_cache:
+        _lora_cache.move_to_end(lora_path)
+        return _lora_cache[lora_path]
+    lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
+    _lora_cache[lora_path] = lora
+    if len(_lora_cache) > _LORA_CACHE_MAX:
+        _lora_cache.popitem(last=False)
+    return lora
 
 
 def _safe_float(value, default=1.0):
@@ -58,9 +76,7 @@ class LoRA堆叠加载器:
 
             try:
                 lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
-                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                
-                # 叠加应用
+                lora = _load_lora_cached(lora_path)
                 current_model, current_clip = comfy.sd.load_lora_for_models(
                     current_model, current_clip, lora, strength_model, strength_clip
                 )
@@ -89,7 +105,8 @@ class LoRA堆叠加载器_仅模型:
     def apply_stack_model_only(self, 模型, lora_stack_config):
         try:
             lora_list = json.loads(lora_stack_config)
-        except:
+        except Exception as e:
+            print(f"[VisualLoader] 错误: {e}")
             return (模型,)
 
         current_model = 模型
@@ -102,13 +119,12 @@ class LoRA堆叠加载器_仅模型:
 
             try:
                 lora_path = folder_paths.get_full_path_or_raise("loras", lora_name)
-                lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
-                
-                # CLIP 传 None
+                lora = _load_lora_cached(lora_path)
                 current_model, _ = comfy.sd.load_lora_for_models(
                     current_model, None, lora, strength_model, 0
                 )
-            except:
+            except Exception as e:
+                print(f"[VisualLoader] 错误: {e}")
                 continue
 
         return (current_model,)
