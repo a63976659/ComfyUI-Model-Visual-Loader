@@ -1,0 +1,17 @@
+[project]
+name = "ComfyUI-Model-Visual-Loader"
+description = "ComfyUI模型加载带预览图功能节点 是一款专为 ComfyUI 用户打造的高效可视化模型加载插件，通过直观的缩略图预览和强大的分类搜索功能，将繁琐的模型选择过程转化为愉悦的视觉体验。"
+version = "2.1.0"
+license = {file = "LICENSE"} 
+
+[project.urls]
+Repository = "https://github.com/a63976659/ComfyUI-Model-Visual-Loader"
+#  Used by Comfy Registry https://registry.comfy.org
+
+[tool.comfy]
+PublisherId = "a63976659"
+DisplayName = "ComfyUI-Model-Visual-Loader"
+Icon = ""
+includes = [] 
+# "requires-comfyui" = ">=1.0.0"  # ComfyUI version compatibility
+
